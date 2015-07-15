@@ -9,7 +9,7 @@ from sys import argv
 
 def main(cli_args):
     for target in cli_args:
-        backup_target_database(target)
+        backup_target_database(*target.split('=', 1))
 
 
 def backup_target_database(target_path, backup_dir=None):

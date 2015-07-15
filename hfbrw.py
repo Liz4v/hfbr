@@ -4,9 +4,15 @@ from bz2 import BZ2File
 from datetime import datetime
 from os.path import abspath, dirname, join, sep
 from hashlib import sha512
+from sys import argv
 
 
-def do_backup(target_path, backup_dir=None):
+def main(cli_args):
+    for target in cli_args:
+        backup_target_database(target)
+
+
+def backup_target_database(target_path, backup_dir=None):
     if not backup_dir:
         backup_dir = dirname(abspath(target_path))
     hash_path = join(backup_dir, 'last_hash')
@@ -30,7 +36,4 @@ def grab_extension(filename_or_path):
 
 
 if __name__ == '__main__':
-    from sys import argv
-
-    for target in argv:
-        do_backup(target)
+    main(argv)

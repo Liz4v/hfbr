@@ -2,7 +2,8 @@
 # coding=utf-8
 from bz2 import BZ2File
 from datetime import datetime
-from os.path import abspath, dirname, join, sep
+from os import listdir
+from os.path import abspath, dirname, getmtime, join, sep
 from hashlib import sha512
 from sys import argv
 
@@ -47,6 +48,29 @@ def grab_extension(filename_or_path):
         return filename[filename.rindex('.'):]
     except ValueError:
         return ''
+
+
+class RetentionPlan:
+    def __init__(self, plan_description=((None, None),)):
+        transposed_plan = [tuple(x) for x in zip(*plan_description)]
+        self.granularity, self.retention = transposed_plan
+
+    def prune(self, target_dir='.', pinned_list=()):
+        files = [FileInfo(target_dir, f, pinned_list, self)
+                 for f in listdir(target_dir) if f.endswith('.bz2')]
+        files.sort(key=lambda i: -i.timestamp)  # Most recent to oldest.
+
+
+class FileInfo(object):
+    def __init__(self, dirpath, filename, pinned_list, plan):
+        self.dirpath = dirpath
+        self.filename = join(dirpath, filename)
+        self.timestamp = getmtime(self.filename)
+        self.when = datetime.fromtimestamp(self.timestamp)
+        self.pinned = filename in pinned_list
+
+    def __str__(self):
+        return '<%s %s %s>' % ('##' if self.pinned else '--', self.when.strftime('%Y%m%d%H%M%S'), self.filename)
 
 
 if __name__ == '__main__':

@@ -16,12 +16,17 @@ def backup_target_database(target_path, backup_dir=None):
     if not backup_dir:
         backup_dir = dirname(abspath(target_path))
     hash_path = join(backup_dir, 'last_hash')
-    new_hash = sha512(open(target_path, 'rb').read()).digest()
-    if new_hash != open(hash_path, 'rb').read():
+    with open(target_path, 'rb') as target:
+        new_hash = sha512(target.read()).digest()
+    with open(hash_path, 'rb') as hashfile:
+        old_hash = hashfile.read()
+    if new_hash != old_hash:
         snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + grab_extension(target_path) + '.bz2'
         snapshot_path = join(backup_dir, snapshot_filename)
-        BZ2File(snapshot_path, 'wb').write(open(target_path, 'rb').read())
-        open(hash_path, 'wb').write(new_hash)
+        with open(target_path, 'rb') as target, BZ2File(snapshot_path, 'wb') as snapshot:
+            snapshot.write(target.read())
+        with open(hash_path, 'wb') as hashfile:
+            hashfile.write(new_hash)
 
 
 def grab_extension(filename_or_path):

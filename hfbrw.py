@@ -9,9 +9,11 @@ from hashlib import sha512
 from sys import argv
 
 
-def main(cli_args):
-    for target in cli_args:
-        backup_target_database(*target.split('=', 1))
+def main():
+    settings = Settings()
+    for target_path, backup_dir, retention_plan in settings:
+        backup_target_database(target_path, backup_dir)
+        retention_plan.muster(backup_dir)
 
 
 def backup_target_database(target_path, backup_dir=None):
@@ -86,6 +88,7 @@ class FileInfo(object):
 
 class SlotOfRetention:
     def __init__(self, granularity, quantity):
+        self.quantity = quantity
         if granularity is None:
             self.granularity = 1
             self._calc = self._calc_secdiv
@@ -97,25 +100,20 @@ class SlotOfRetention:
             self._calc = self._calc_secdiv
         else:
             raise ValueError('Unknown granularity type %s', type(granularity))
-        self.quantity = quantity
-        self.timeslots = {}
 
     def muster(self, list_of_files):
-        for f in list_of_files:
-            self.calc(f)
-        q = 0
-        for slot in sorted(self.timeslots.keys(), reverse=True):
-            chosen = reduce(FileInfo.reduce, self.timeslots[slot])
+        timeslots = {}
+        for fileinfo in list_of_files:
+            position = self._calc(fileinfo)
+            if position not in timeslots:
+                timeslots[position] = []
+            timeslots[position].append(fileinfo)
+        keys = timeslots.keys()
+        if self.quantity:
+            keys = keys[-self.quantity:]
+        for slot in keys:
+            chosen = reduce(FileInfo.reduce, timeslots[slot])
             chosen.pinned = True
-            q += 1
-            if q >= self.quantity:
-                break
-
-    def calc(self, fileinfo: FileInfo):
-        position = self._calc(fileinfo)
-        if position not in self.timeslots:
-            self.timeslots[position] = []
-        self.timeslots[position].append(fileinfo)
 
     def _calc_secdiv(self, fileinfo: FileInfo):
         return int(fileinfo.timestamp / self.granularity)
@@ -125,6 +123,30 @@ class SlotOfRetention:
 
     def _calc_year(self, fileinfo: FileInfo):
         return fileinfo.when.year
+
+
+class Settings(list):
+    _plans = {'default': ((None, None),)}
+
+    def __init__(self):
+        try:
+            from . import settings
+        except ImportError:
+            settings = None
+        self.plans = {}
+        for k, v in getattr(settings, 'plans', {'default': ((None, None),)}).items():
+            self.plans[k] = RetentionPlan(v)
+        targets = settings.targets if hasattr(settings, 'targets') else self._targets_from_argv()
+        super().__init__([(a, b, self.plans[c]) for a, b, c in targets])
+
+    def _targets_from_argv(self):
+        for item in argv:
+            args = item.split(':', 2)
+            if len(args) < 2:
+                args.append(dirname(args[0]))
+            if len(args) < 3:
+                args.append('default')
+            yield args
 
 
 if __name__ == '__main__':

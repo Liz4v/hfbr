@@ -42,8 +42,8 @@ def backup_target_database(target_path, backup_dir):
         old_hash = hashfile.read()
     if hasher.digest() != old_hash:
         snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + splitext(target_path)[1] + '.bz2'
-        log.debug('Change detected! Saving to %s', snapshot_filename)
         snapshot_path = join(backup_dir, snapshot_filename)
+        log.debug('Change detected! Saving to %s', snapshot_path)
         with open(target_path, 'rb') as target, BZ2File(snapshot_path, 'wb') as snapshot:
             block_transfer(target.read, snapshot.write)
         with open(hash_path, 'wb') as hashfile:
@@ -59,10 +59,14 @@ def block_transfer(fread, fwrite, length=16 * 1024):
 
 
 class RetentionPlan:
-    def __init__(self, plan_description=((None, None),)):
-        self.plan = plan_description
+    def __init__(self, plan_description=None):
+        self.plan = plan_description or ()
 
     def prune(self, target_dir='.', pinned_list=(), prune=False):
+        if True not in [True for slot in self.plan if slot[1]]:  # at least one slot with limited quantity?
+            log.info("No retention plan on %s. Keeping all files.", target_dir)
+            return
+        log.info("Applying retention plan to %s.", target_dir)
         files = [FileInfo(target_dir, f, pinned_list) for f in listdir(target_dir) if f.endswith('.bz2')]
         for retention in [SlotOfRetention(*slot) for slot in self.plan]:
             retention.muster(files)
@@ -142,20 +146,17 @@ class Settings(list):
                 import settings
         except ImportError:
             settings = None
-        dictConfig(getattr(settings, 'LOGGING', {}))
+        if hasattr(settings, 'LOGGING'):
+            dictConfig(settings.LOGGING)
         super().__init__(settings.TARGETS if hasattr(settings, 'TARGETS') else self._targets_from_argv())
-        plans = {'': RetentionPlan()}
+        plans = {}
         for k, v in getattr(settings, 'PLANS', {}).items():
             plans[k] = RetentionPlan(v)
         for item in self:
             key = 'retention_plan'
-            plan = item.get(key, '')
+            plan = item.get(key)
             if isinstance(plan, str):
                 item[key] = plans[plan]
-            elif isinstance(plan, (list, tuple)):
-                item[key] = RetentionPlan(plan)
-            else:
-                raise TypeError(plan)
 
     def _targets_from_argv(self):
         for item in argv:
@@ -167,16 +168,14 @@ class Settings(list):
             yield args
 
 
-def backup_and_retention(target_path=None, backup_dir=None, retention_plan=RetentionPlan(), pin=(), prune=True):
+def backup_and_retention(target_path=None, backup_dir=None, retention_plan=(), pin=(), prune=True):
+    if not (target_path or backup_dir):
+        raise ValueError("No target_path or backup_dir in plan; nothing to do!")
     if target_path:
-        log.info("Backing up: %s to %s", target_path, backup_dir or 'local')
+        log.info("Applying backup plan: %s", target_path)
         if not backup_dir:
             backup_dir = dirname(abspath(target_path))
         backup_target_database(target_path, backup_dir)
-    elif backup_dir:
-        log.info("Applying retention plan to %s", backup_dir)
-    else:
-        raise ValueError("No target_path or backup_dir in plan; nothing to do!")
     if not isinstance(retention_plan, RetentionPlan):
         retention_plan = RetentionPlan(retention_plan)
     retention_plan.prune(backup_dir, pin, prune)

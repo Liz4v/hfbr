@@ -27,6 +27,7 @@ log = getLogger('hfbrw')
 
 def main():
     settings = Settings()
+    log.info('^' * 40)
     for item in settings:
         log.debug("Handling target: %s", item)
         target_path = item['target_path']
@@ -34,6 +35,7 @@ def main():
         retention_plan = item['retention_plan']
         backup_target_database(target_path, backup_dir)
         retention_plan.prune(backup_dir, item.get('pin', ()), item.get('pretend', False))
+    log.info('v' * 40)
 
 
 def backup_target_database(target_path, backup_dir):

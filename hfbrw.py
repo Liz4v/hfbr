@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # coding=utf-8
 #
 # Copyright 2015, Ekevoo
@@ -15,22 +15,28 @@
 from bz2 import BZ2File
 from datetime import datetime, timedelta
 from functools import reduce
-from os import listdir
-from os.path import abspath, dirname, getmtime, join, sep
+from logging import getLogger
+from logging.config import dictConfig
+from os import listdir, unlink
+from os.path import abspath, dirname, getmtime, join, splitext
 from hashlib import sha512
 from sys import argv
+
+log = getLogger('hfbrw')
 
 
 def main():
     settings = Settings()
-    for target_path, backup_dir, retention_plan in settings:
+    for item in settings:
+        log.debug("Handling target: %s", item)
+        target_path = item['target_path']
+        backup_dir = item.get('backup_dir') or dirname(abspath(target_path))
+        retention_plan = item['retention_plan']
         backup_target_database(target_path, backup_dir)
-        retention_plan.muster(backup_dir)
+        retention_plan.prune(backup_dir, item.get('pin', ()), item.get('pretend', False))
 
 
-def backup_target_database(target_path, backup_dir=None):
-    if not backup_dir:
-        backup_dir = dirname(abspath(target_path))
+def backup_target_database(target_path, backup_dir):
     hash_path = join(backup_dir, 'last_hash')
     hasher = sha512()
     with open(target_path, 'rb') as target:
@@ -38,7 +44,7 @@ def backup_target_database(target_path, backup_dir=None):
     with open(hash_path, 'rb') as hashfile:
         old_hash = hashfile.read()
     if hasher.digest() != old_hash:
-        snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + grab_extension(target_path) + '.bz2'
+        snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + splitext(target_path)[1] + '.bz2'
         snapshot_path = join(backup_dir, snapshot_filename)
         with open(target_path, 'rb') as target, BZ2File(snapshot_path, 'wb') as snapshot:
             block_transfer(target.read, snapshot.write)
@@ -54,30 +60,19 @@ def block_transfer(fread, fwrite, length=16 * 1024):
         buffer = fread(length)
 
 
-def grab_extension(filename_or_path):
-    try:
-        filename = filename_or_path[filename_or_path.rindex(sep) + len(sep):]
-    except ValueError:
-        filename = filename_or_path
-    try:
-        return filename[filename.rindex('.'):]
-    except ValueError:
-        return ''
-
-
 class RetentionPlan:
     def __init__(self, plan_description=((None, None),)):
         self.plan = plan_description
 
-    def prune(self, target_dir='.', pinned_list=()):
+    def prune(self, target_dir='.', pinned_list=(), pretend=True):
         files = [FileInfo(target_dir, f, pinned_list) for f in listdir(target_dir) if f.endswith('.bz2')]
         for retention in [SlotOfRetention(*slot) for slot in self.plan]:
             retention.muster(files)
         files.sort(key=lambda f: -f.timestamp)
         for file in files:
-            print(file)
-            # if not file.pinned:
-            #    unlink(file.filename)
+            log.info('File' + str(file))
+            if not pretend and not file.pinned:
+                unlink(file.filename)
 
 
 class FileInfo(object):
@@ -138,18 +133,28 @@ class SlotOfRetention:
 
 
 class Settings(list):
-    _plans = {'default': ((None, None),)}
-
     def __init__(self):
         try:
-            from . import settings
+            try:
+                from . import settings
+            except SystemError:
+                import settings
         except ImportError:
             settings = None
-        self.plans = {}
-        for k, v in getattr(settings, 'plans', {'default': ((None, None),)}).items():
-            self.plans[k] = RetentionPlan(v)
-        targets = settings.targets if hasattr(settings, 'targets') else self._targets_from_argv()
-        super().__init__([(a, b, self.plans[c]) for a, b, c in targets])
+        dictConfig(getattr(settings, 'LOGGING', {}))
+        super().__init__(settings.TARGETS if hasattr(settings, 'TARGETS') else self._targets_from_argv())
+        plans = {'': RetentionPlan()}
+        for k, v in getattr(settings, 'PLANS', {}).items():
+            plans[k] = RetentionPlan(v)
+        for item in self:
+            key = 'retention_plan'
+            plan = item.get(key, '')
+            if isinstance(plan, str):
+                item[key] = plans[plan]
+            elif isinstance(plan, (list, tuple)):
+                item[key] = RetentionPlan(plan)
+            else:
+                raise TypeError(plan)
 
     def _targets_from_argv(self):
         for item in argv:

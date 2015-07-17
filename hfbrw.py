@@ -120,9 +120,9 @@ class SlotOfRetention:
             if position not in timeslots:
                 timeslots[position] = []
             timeslots[position].append(fileinfo)
-        keys = timeslots.keys()
+        keys = sorted(timeslots.keys(), reverse=True)
         if self.quantity:
-            keys = keys[-self.quantity:]
+            keys = keys[:self.quantity]
         for slot in keys:
             chosen = reduce(FileInfo.reduce, timeslots[slot])
             chosen.pinned = True

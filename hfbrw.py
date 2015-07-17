@@ -71,9 +71,9 @@ class RetentionPlan:
             return
         log.info("Applying retention plan to %s.", target_dir)
         files = [FileInfo(target_dir, f, pinned_list) for f in listdir(target_dir) if f.endswith('.bz2')]
+        files.sort(key=lambda f: -f.timestamp)
         for retention in [SlotOfRetention(*slot) for slot in self.plan]:
             retention.muster(files)
-        files.sort(key=lambda f: -f.timestamp)
         for file in files:
             if file.pinned:
                 log.debug('Keep file ' + str(file))
@@ -151,7 +151,7 @@ class Settings(list):
             settings = None
         if hasattr(settings, 'LOGGING'):
             dictConfig(settings.LOGGING)
-        super().__init__(settings.TARGETS if hasattr(settings, 'TARGETS') else self._targets_from_argv())
+        super().__init__(getattr(settings, 'TARGETS', self._targets_from_argv()))
         plans = {}
         for k, v in getattr(settings, 'PLANS', {}).items():
             plans[k] = RetentionPlan(v)
@@ -164,17 +164,19 @@ class Settings(list):
     def _targets_from_argv(self):
         argv.pop(0)  # remove script name
         if not len(argv):
-            log.error('Nothing to do! Please check the documentation and make sure to have a settings file.')
+            log.fatal('Nothing to do! Check the documentation and make sure to have a settings file.')
+            exit(1)
             return []
         target = {'target_path': argv.pop(0)}
         if len(argv):
             target['backup_dir'] = argv.pop(0)
-        return [target]
+        yield target
 
 
 def backup_and_retention(target_path=None, backup_dir=None, retention_plan=(), pin=(), prune=True):
     if not (target_path or backup_dir):
-        raise ValueError("No target_path or backup_dir in plan; nothing to do!")
+        log.error("Invalid target: no target_path or backup_dir. Check your settings!")
+        return
     if target_path:
         log.info("Applying backup plan: %s", target_path)
         if not backup_dir:

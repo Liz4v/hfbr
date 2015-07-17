@@ -21,7 +21,7 @@ PLANS = {
         (timedelta(days=1), 5),  # 5 daily snapshots
         (timedelta(hours=1), 18),  # 18 hourly snapshots
         (None, 10),  # 10 latest snapshots
-    )
+    ),
 }
 
 LOGGING = {

@@ -38,8 +38,11 @@ def backup_target_database(target_path, backup_dir):
     hasher = sha512()
     with open(target_path, 'rb') as target:
         block_transfer(target.read, hasher.update)
-    with open(hash_path, 'rb') as hashfile:
-        old_hash = hashfile.read()
+    try:
+        with open(hash_path, 'rb') as hashfile:
+            old_hash = hashfile.read()
+    except FileNotFoundError:
+        old_hash = b''
     if hasher.digest() != old_hash:
         snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + splitext(target_path)[1] + '.bz2'
         snapshot_path = join(backup_dir, snapshot_filename)
@@ -159,13 +162,14 @@ class Settings(list):
                 item[key] = plans[plan]
 
     def _targets_from_argv(self):
-        for item in argv:
-            args = item.split(':', 2)
-            if len(args) < 2:
-                args.append(dirname(args[0]))
-            if len(args) < 3:
-                args.append('default')
-            yield args
+        argv.pop(0)  # remove script name
+        if not len(argv):
+            log.error('Nothing to do! Please check the documentation and make sure to have a settings file.')
+            return []
+        target = {'target_path': argv.pop(0)}
+        if len(argv):
+            target['backup_dir'] = argv.pop(0)
+        return [target]
 
 
 def backup_and_retention(target_path=None, backup_dir=None, retention_plan=(), pin=(), prune=True):

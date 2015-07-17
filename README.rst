@@ -3,7 +3,7 @@ High Frequency Backup and Retention
 ===================================
 
 Backup important small files under a high frequency schedule,
-avoiding duplicates, and pruning less relevant states as they get older.
+avoiding duplicates, and pruning less relevant snapshots as they get older.
 
 Licensed under the `Apache License 2.0`__.
 
@@ -118,7 +118,8 @@ A retention slot is a 2-tuple composed of *granularity*, and *quantity*.
 Every time the retention plan is applied to a backup directory, it will run each slot on all files.
 For each desireable slot it will try to find a file to be retained, and pin the earliest one if none is found.
 
-Because we don't always make backups, we will only count the slots when at least one file can fulfill a slot.
+Because we don't always make backups (only when the file changes),
+we will only count the slots when at least one file can fulfill a slot.
 For example, let's say your file only changes on weekdays, and you have 7 day retention.
 No files will be generated on weekends, and to fulfill 7 days we'll need to go over to the previous week until
 at least 7 files can be found, each in a different day. This way, 7 non-consecutive days will be retained.
@@ -134,10 +135,13 @@ you will lose your earliest backups because later backups will fulfill the same 
 Roadmap
 -------
 
-*   Maybe detect changes based on mtime and size? Checksum seems a bit overkill...
-*   Detect sqlite databases and use their backup function.
-*   Detect directories and ``tar`` them.
+*   Maybe detect changes based on mtime and size instead? Checksum seems a bit overkill...
+*   Special cases for ``target_path``:
 
-    *   Use GNU differential tar (``-g``) based on retention granularities. Will this work on non-Linux?
+    *   Detect sqlite databases and use their backup function.
+    *   Detect directories and ``tar`` them.
 
-*   Ability to upload backups somewhere else.
+        *   Use GNU differential tar (``-g``) based on retention granularities. Will this work on non-Linux?
+
+*   Ability to push backups to a remote server or something. What makes sense, ``scp``, e-mail, or what?
+    In my scenario, pulling was way easier to implement.

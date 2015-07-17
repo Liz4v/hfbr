@@ -27,8 +27,10 @@ log = getLogger('hfbrw')
 
 def main():
     settings = Settings()
+    log.info('^' * 40)
     for item in settings:
         backup_and_retention(**item)
+    log.info('v' * 40)
 
 
 def backup_target_database(target_path, backup_dir):

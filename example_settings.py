@@ -27,10 +27,11 @@ PLANS = {
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {'fmt': {'datefmt': '%Y-%m-%d %H:%M:%S', 'format': '%(asctime)s %(levelname)-8s %(message)s'}},
+    'formatters': {'fmt': {'datefmt': '%Y-%m-%d %H:%M:%S',
+                           'format': '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'}},
     'handlers': {
         'console': {'class': 'logging.StreamHandler', 'formatter': 'fmt', 'stream': stdout},
-        'file': {'class': 'logging.RotatingFileHandler',
+        'file': {'class': 'logging.handlers.RotatingFileHandler',
                  'formatter': 'fmt',
                  'filename': '/tmp/hfbrw.log',
                  'maxBytes': 4 * 1024 * 1024,  # 4 MB

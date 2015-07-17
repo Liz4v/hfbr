@@ -41,8 +41,8 @@ def backup_target_database(target_path, backup_dir):
     with open(hash_path, 'rb') as hashfile:
         old_hash = hashfile.read()
     if hasher.digest() != old_hash:
-        log.debug('Change detected!')
         snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + splitext(target_path)[1] + '.bz2'
+        log.debug('Change detected! Saving to %s', snapshot_filename)
         snapshot_path = join(backup_dir, snapshot_filename)
         with open(target_path, 'rb') as target, BZ2File(snapshot_path, 'wb') as snapshot:
             block_transfer(target.read, snapshot.write)

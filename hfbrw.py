@@ -90,7 +90,7 @@ class FileInfo(object):
         if self.pinned != them.pinned:
             return self if self.pinned > them.pinned else them
         else:
-            return self if self.when <= them.pinned else them
+            return self if self.timestamp <= them.timestamp else them
 
 
 class SlotOfRetention:

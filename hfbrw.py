@@ -18,7 +18,7 @@ from functools import reduce
 from logging import getLogger
 from logging.config import dictConfig
 from os import listdir, unlink
-from os.path import abspath, dirname, getmtime, join, splitext
+from os.path import abspath, basename, dirname, getmtime, join, splitext
 from hashlib import sha512
 from sys import argv
 
@@ -28,12 +28,7 @@ log = getLogger('hfbrw')
 def main():
     settings = Settings()
     for item in settings:
-        log.debug("Handling target: %s", item)
-        target_path = item['target_path']
-        backup_dir = item.get('backup_dir') or dirname(abspath(target_path))
-        retention_plan = item['retention_plan']
-        backup_target_database(target_path, backup_dir)
-        retention_plan.prune(backup_dir, item.get('pin', ()), item.get('pretend', False))
+        backup_and_retention(**item)
 
 
 def backup_target_database(target_path, backup_dir):
@@ -44,6 +39,7 @@ def backup_target_database(target_path, backup_dir):
     with open(hash_path, 'rb') as hashfile:
         old_hash = hashfile.read()
     if hasher.digest() != old_hash:
+        log.debug('Change detected!')
         snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + splitext(target_path)[1] + '.bz2'
         snapshot_path = join(backup_dir, snapshot_filename)
         with open(target_path, 'rb') as target, BZ2File(snapshot_path, 'wb') as snapshot:
@@ -70,9 +66,12 @@ class RetentionPlan:
             retention.muster(files)
         files.sort(key=lambda f: -f.timestamp)
         for file in files:
-            log.info('File' + str(file))
-            if not pretend and not file.pinned:
-                unlink(file.filename)
+            if file.pinned:
+                log.debug('Keep file ' + str(file))
+            else:
+                log.info('Delete file ' + str(file))
+                if not pretend:
+                    unlink(file.filename)
 
 
 class FileInfo(object):
@@ -84,7 +83,7 @@ class FileInfo(object):
         self.pinned = filename in pinned_list
 
     def __str__(self):
-        return '<%s %s %s>' % ('##' if self.pinned else '--', self.when.strftime('%Y%m%d%H%M%S'), self.filename)
+        return ' '.join((self.when.strftime('%Y%m%d%H%M%S'), basename(self.filename)))
 
     def reduce(self, them):
         if self.pinned != them.pinned:
@@ -164,6 +163,21 @@ class Settings(list):
             if len(args) < 3:
                 args.append('default')
             yield args
+
+
+def backup_and_retention(target_path=None, backup_dir=None, retention_plan=RetentionPlan(), pin=(), pretend=False):
+    if target_path:
+        log.info("Backing up: %s to %s", target_path, backup_dir or 'local')
+        if not backup_dir:
+            backup_dir = dirname(abspath(target_path))
+        backup_target_database(target_path, backup_dir)
+    elif backup_dir:
+        log.info("Applying retention plan to %s", backup_dir)
+    else:
+        raise ValueError("No target_path or backup_dir in plan; nothing to do!")
+    if not isinstance(retention_plan, RetentionPlan):
+        retention_plan = RetentionPlan(retention_plan)
+    retention_plan.prune(backup_dir, pin, pretend)
 
 
 if __name__ == '__main__':

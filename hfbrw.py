@@ -62,7 +62,7 @@ class RetentionPlan:
     def __init__(self, plan_description=((None, None),)):
         self.plan = plan_description
 
-    def prune(self, target_dir='.', pinned_list=(), pretend=True):
+    def prune(self, target_dir='.', pinned_list=(), prune=False):
         files = [FileInfo(target_dir, f, pinned_list) for f in listdir(target_dir) if f.endswith('.bz2')]
         for retention in [SlotOfRetention(*slot) for slot in self.plan]:
             retention.muster(files)
@@ -71,8 +71,8 @@ class RetentionPlan:
             if file.pinned:
                 log.debug('Keep file ' + str(file))
             else:
-                log.info('Delete file ' + str(file))
-                if not pretend:
+                log.info('Prune file ' + str(file))
+                if prune:
                     unlink(file.filename)
 
 
@@ -167,7 +167,7 @@ class Settings(list):
             yield args
 
 
-def backup_and_retention(target_path=None, backup_dir=None, retention_plan=RetentionPlan(), pin=(), pretend=False):
+def backup_and_retention(target_path=None, backup_dir=None, retention_plan=RetentionPlan(), pin=(), prune=True):
     if target_path:
         log.info("Backing up: %s to %s", target_path, backup_dir or 'local')
         if not backup_dir:
@@ -179,7 +179,7 @@ def backup_and_retention(target_path=None, backup_dir=None, retention_plan=Reten
         raise ValueError("No target_path or backup_dir in plan; nothing to do!")
     if not isinstance(retention_plan, RetentionPlan):
         retention_plan = RetentionPlan(retention_plan)
-    retention_plan.prune(backup_dir, pin, pretend)
+    retention_plan.prune(backup_dir, pin, prune)
 
 
 if __name__ == '__main__':

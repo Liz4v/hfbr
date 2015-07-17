@@ -8,7 +8,7 @@ TARGETS = [
         'backup_dir': '/var/backup/sqlite-db',
         'retention_plan': 'default',
         'pin': ('20150717-1155.sq3.bz2',),
-        'pretend': True,
+        'prune': False,
     },
 ]
 

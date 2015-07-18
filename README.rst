@@ -138,7 +138,8 @@ CLI Mode
 
 Usage: ``hfbrw.py target_path [backup_dir]``
 
-You can use just the command line interface (CLI) for simple change-detection backup without a retention plan.
+If you don't have a settings file, you can use just the command line interface (CLI)
+for simple change-detection backup without a retention plan.
 To do that, simply define the origin and destination.
 As when defined using the `Settings File`_, if ``backup_dir`` is not provided, it'll back up in place.
 

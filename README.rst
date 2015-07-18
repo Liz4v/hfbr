@@ -15,7 +15,7 @@ Installation
 
 1.  Make sure you have python3_ installed.
 2.  Copy ``example_settings.py`` into ``settings.py``.
-3.  Edit the newly created `Settings File`_ according to your needs.
+3.  Edit the newly created `Settings File`_ according to your needs, or do some basic testing with `CLI Mode`_.
 4.  Add ``hfbrw.py`` to your crontab. My schedule is ``*/20 * * * *``, which means every 20 minutes.
 
 .. _python3: http://python.org/
@@ -88,19 +88,19 @@ Available settings are:
 PLANS
 ^^^^^
 
-This is a dictionary that contains descriptions of backup plans mapped by name, to be referenced by the targets::
+This is a dictionary that contains descriptions of retention plans mapped by name, to be referenced by the targets::
 
     PLANS = {
         'important': (
-            ('year', None),  # permanent yearly snapshots
-            ('month', 9),  # 9 monthly snapshots
-            (timedelta(weeks=1), 6),  # 6 weekly snapshots
-            (timedelta(days=1), 5),  # 5 daily snapshots
+            ('year',           None),  # permanent yearly snapshots
+            ('month',             9),  # 9 monthly snapshots
+            (timedelta(weeks=1),  6),  # 6 weekly snapshots
+            (timedelta(days=1),   5),  # 5 daily snapshots
             (timedelta(hours=1), 18),  # 18 hourly snapshots
-            (None, 10),  # 10 latest snapshots
+            (None,               10),  # 10 latest snapshots
         ),
         'meh': (
-            (None, 5),  # 5 latest snapshots
+            (None,              5),  # 5 latest snapshots
             (timedelta(days=1), 8),  # 8 daily snapshots
         ),
     }
@@ -113,7 +113,8 @@ A retention slot is a 2-tuple composed of *granularity*, and *quantity*.
     There are also three special values: ``'year'``, ``'month'``, or ``None``. ``None`` means look at all backups.
 
 *   *Quantity* is how many backups to keep when looking within that granularity.
-    The special value ``None`` means forever_, and it's a useful quantity to give to your largest granularity.
+    The special value ``None`` means keep all of them forever_,
+    and it's a useful quantity to give to your largest granularity.
 
 Every time the retention plan is applied to a backup directory, it will run each slot on all files.
 For each desireable slot it will try to find a file to be retained, and pin the earliest one if none is found.
@@ -130,6 +131,16 @@ you will lose your earliest backups because later backups will fulfill the same 
 
 .. _datetime: https://docs.python.org/3/library/datetime.html#timedelta-objects
 .. _forever: https://www.youtube.com/watch?v=ofvJU3AFOOo
+
+--------
+CLI Mode
+--------
+
+Usage: ``hfbrw.py target_path [backup_dir]``
+
+You can use just the command line interface (CLI) for simple change-detection backup without a retention plan.
+To do that, simply define the origin and destination.
+As when defined using the `Settings File`_, if ``backup_dir`` is not provided, it'll back up in place.
 
 -------
 Roadmap

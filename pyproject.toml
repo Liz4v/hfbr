@@ -3,8 +3,15 @@ name = "hfbr"
 version = "15.0"
 description = "High Frequency Backup and Retention"
 readme = "README.md"
-requires-python = ">=3.5"
-dependencies = []
+requires-python = ">=3.14"
+dependencies = ["pyyaml>=5.0"]
+
+[project.scripts]
+hfbr = "hfbr:main"
+
+[build-system]
+requires = ["uv-build"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 120

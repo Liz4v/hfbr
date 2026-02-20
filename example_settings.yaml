@@ -1,0 +1,40 @@
+targets:
+  - target_path: "db.sqlite"
+    backup_dir: "/var/backup/sqlite-db"
+    retention_plan: "default"
+    pin:
+      - "20150717-1155.sq3.bz2"
+    prune: false
+
+plans:
+  default:
+    # Snapshots are pinned in the order these rules are declared.
+    - [year, null]       # permanent yearly snapshots
+    - [month, 9]         # 9 monthly snapshots
+    - ["1 week", 6]      # 6 weekly snapshots
+    - ["1 day", 5]       # 5 daily snapshots
+    - ["1 hour", 18]     # 18 hourly snapshots
+    - [null, 10]         # 10 latest snapshots
+
+logging:
+  version: 1
+  disable_existing_loggers: false
+  formatters:
+    fmt:
+      datefmt: "%Y-%m-%d %H:%M:%S"
+      format: "%(asctime)s %(levelname)-8s %(name)-15s %(message)s"
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: fmt
+      stream: "ext://sys.stdout"
+    file:
+      class: logging.handlers.RotatingFileHandler
+      formatter: fmt
+      filename: "/tmp/hfbr.log"
+      maxBytes: 4194304    # 4 MB
+      backupCount: 5
+  loggers:
+    hfbr:
+      handlers: [console]
+      level: INFO

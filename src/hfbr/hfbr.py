@@ -19,10 +19,13 @@ from hashlib import sha512
 from logging import getLogger
 from logging.config import dictConfig
 from os import listdir, unlink
-from os.path import abspath, basename, dirname, getmtime, join, splitext
+from os.path import abspath, basename, dirname, getmtime, isfile, join, splitext
+from re import compile as re_compile
 from sys import argv
 
-log = getLogger("hfbrw")
+from yaml import safe_load
+
+log = getLogger("hfbr")
 
 
 def main():
@@ -101,6 +104,22 @@ class FileInfo(object):
             return self if self.timestamp <= them.timestamp else them
 
 
+DURATION_PATTERN = re_compile(r"^(\d+)\s*(weeks?|days?|hours?|minutes?|seconds?)$")
+
+
+def parse_duration(value):
+    """Convert a human-readable duration string (e.g. '1 week') to a timedelta, or pass through 'year'/'month'/None."""
+    if value is None or value in ("year", "month"):
+        return value
+    match = DURATION_PATTERN.match(str(value).strip().lower())
+    if not match:
+        raise ValueError(f"Invalid duration: {value!r}. Expected format like '1 week', '5 days', '1 hour'.")
+    amount, unit = int(match.group(1)), match.group(2)
+    if not unit.endswith("s"):
+        unit += "s"
+    return timedelta(**{unit: amount})
+
+
 class SlotOfRetention:
     def __init__(self, granularity, quantity):
         self.quantity = quantity
@@ -142,24 +161,27 @@ class SlotOfRetention:
 
 class Settings(list):
     def __init__(self):
-        try:
-            try:
-                from . import settings
-            except SystemError:
-                import settings
-        except ImportError:
-            settings = None
-        if hasattr(settings, "LOGGING"):
-            dictConfig(settings.LOGGING)
-        super().__init__(getattr(settings, "TARGETS", self._targets_from_argv()))
+        config = self._load_yaml() or {}
+        if "logging" in config:
+            dictConfig(config["logging"])
+        super().__init__(config.get("targets") or list(self._targets_from_argv()))
         plans = {}
-        for k, v in getattr(settings, "PLANS", {}).items():
-            plans[k] = RetentionPlan(v)
+        for name, slots in config.get("plans", {}).items():
+            plans[name] = RetentionPlan(tuple((parse_duration(s[0]), s[1]) for s in slots))
         for item in self:
-            key = "retention_plan"
-            plan = item.get(key)
+            plan = item.get("retention_plan")
             if isinstance(plan, str):
-                item[key] = plans[plan]
+                item["retention_plan"] = plans[plan]
+            elif isinstance(plan, list):
+                item["retention_plan"] = RetentionPlan(tuple((parse_duration(s[0]), s[1]) for s in plan))
+
+    @staticmethod
+    def _load_yaml():
+        config_path = "settings.yaml"
+        if not isfile(config_path):
+            return None
+        with open(config_path) as f:
+            return safe_load(f)
 
     def _targets_from_argv(self):
         argv.pop(0)  # remove script name

@@ -8,54 +8,47 @@ Licensed under the [Apache License 2.0](LICENSE).
 ## Installation
 
 1.  Make sure you have [python3](http://python.org/) installed.
-2.  Copy `example_settings.py` into `settings.py`.
+2.  Copy `example_settings.yaml` into `settings.yaml`.
 3.  Edit the newly created [Settings File](#settings-file) according to your needs, or do some basic testing with [CLI Mode](#cli-mode).
-4.  Add `hfbrw.py` to your crontab. My schedule is `*/20 * * * *`, which means every 20 minutes.
+4.  Add `hfbr` to your crontab. My schedule is `*/20 * * * *`, which means every 20 minutes.
 
 ## Settings File
 
-The settings file is expected to have three variables: `TARGETS` and `PLANS`, described below,
-and `LOGGING`, as [defined](https://docs.python.org/3/library/logging.config.html) by the Logging configuration module.
+The settings file is a YAML file named `settings.yaml` placed in your working directory.
+It has three top-level keys: `targets` and `plans`, described below,
+and `logging`, following the [dictConfig schema](https://docs.python.org/3/library/logging.config.html).
 
-### TARGETS
+### targets
 
 This is the heart of your settings.
 In it you have a list of targets, each representing a backup and/or a retention task:
 
-```python
-TARGETS = [
-    {
-        'target_path': '/home/django/honesty/db.sqlite3',
-    },
-    {
-        'backup_dir': '/home/backup/kindness',
-        'retention_plan': 'important',
-    },
-    {
-        'target_path': '/home/django/loyalty/db.sqlite3',
-        'backup_dir': '/home/backup/loyalty',
-        'retention_plan': 'meh',
-    },
-    {
-        'target_path': '/home/django/generosity/db.sqlite3',
-        'backup_dir': '/home/backup/generosity',
-        'retention_plan': 'important',
-        'prune': False,
-    },
-    {
-        'target_path': '/home/django/laughter/db.sqlite3',
-        'backup_dir': '/home/backup/laughter',
-        'retention_plan': 'important',
-        'pin': ('20150717-1155.sq3.bz2',),
-    },
-    {
-        'target_path': '/home/django/magic/db.sqlite3',
-        'backup_dir': '/home/backup/magic',
-        'retention_plan': ((None, 10), ('month', 3)),
-        'pin': (),
-        'prune': False,
-    },
-]
+```yaml
+targets:
+  - target_path: "/home/django/honesty/db.sqlite3"
+
+  - backup_dir: "/home/backup/kindness"
+    retention_plan: "important"
+
+  - target_path: "/home/django/loyalty/db.sqlite3"
+    backup_dir: "/home/backup/loyalty"
+    retention_plan: "meh"
+
+  - target_path: "/home/django/generosity/db.sqlite3"
+    backup_dir: "/home/backup/generosity"
+    retention_plan: "important"
+    prune: false
+
+  - target_path: "/home/django/laughter/db.sqlite3"
+    backup_dir: "/home/backup/laughter"
+    retention_plan: "important"
+    pin:
+      - "20150717-1155.sq3.bz2"
+
+  - target_path: "/home/django/magic/db.sqlite3"
+    backup_dir: "/home/backup/magic"
+    retention_plan: [[null, 10], [month, 3]]
+    prune: false
 ```
 
 Available settings are:
@@ -64,42 +57,39 @@ Available settings are:
   If not given, only the retention policy is performed at `backup_dir`.
 - `backup_dir`: Full path to the directory where the backups are stored.
   If not given, it is backed up in place, alongside the same directory of `target_path`.
-- `retention_plan`: Name or description of the retention plan.
-  See [PLANS](#plans) for details. If not given, no files are pruned.
-- `pin`: An enumeration of files that are not to be pruned.
+- `retention_plan`: Name or inline description of the retention plan.
+  See [plans](#plans) for details. If not given, no files are pruned.
+- `pin`: A list of filenames that are not to be pruned.
   Pinned files fulfill the retention slots they fall in.
-- `prune`: Set it to `False` to run the retention plan in pretend mode. Results go in the logs.
+- `prune`: Set to `false` to run the retention plan in pretend mode. Results go in the logs.
 
-### PLANS
+### plans
 
-This is a dictionary that contains descriptions of retention plans mapped by name, to be referenced by the targets:
+This is a mapping of named retention plans, to be referenced by the targets:
 
-```python
-PLANS = {
-    'important': (
-        ('year',           None),  # permanent yearly snapshots
-        ('month',             9),  # 9 monthly snapshots
-        (timedelta(weeks=1),  6),  # 6 weekly snapshots
-        (timedelta(days=1),   5),  # 5 daily snapshots
-        (timedelta(hours=1), 18),  # 18 hourly snapshots
-        (None,               10),  # 10 latest snapshots
-    ),
-    'meh': (
-        (None,              5),  # 5 latest snapshots
-        (timedelta(days=1), 8),  # 8 daily snapshots
-    ),
-}
+```yaml
+plans:
+  important:
+    - [year, null]       # permanent yearly snapshots
+    - [month, 9]         # 9 monthly snapshots
+    - ["1 week", 6]      # 6 weekly snapshots
+    - ["1 day", 5]       # 5 daily snapshots
+    - ["1 hour", 18]     # 18 hourly snapshots
+    - [null, 10]         # 10 latest snapshots
+  meh:
+    - [null, 5]          # 5 latest snapshots
+    - ["1 day", 8]       # 8 daily snapshots
 ```
 
-A retention plan is described as an enumerable of retention slots.
-A retention slot is a 2-tuple composed of *granularity*, and *quantity*.
+A retention plan is a list of retention slots.
+A retention slot is a pair of *granularity* and *quantity*.
 
 - *Granularity* is how far apart we're interested the backups to be, so that they remain relevant as they get older.
-  It can be a `timedelta` as defined by the [datetime](https://docs.python.org/3/library/datetime.html#timedelta-objects) module.
-  There are also three special values: `'year'`, `'month'`, or `None`. `None` means look at all backups.
+  It is a human-readable duration string like `"1 week"`, `"5 days"`, or `"1 hour"`.
+  There are also three special values: `year`, `month`, or `null`. `null` means look at all backups.
 
 - *Quantity* is how many backups to keep when looking within that granularity.
-  The special value `None` means keep all of them [forever](https://www.youtube.com/watch?v=ofvJU3AFOOo),
+  The special value `null` means keep all of them [forever](https://www.youtube.com/watch?v=ofvJU3AFOOo),
   and it's a useful quantity to give to your largest granularity.
 
 Every time the retention plan is applied to a backup directory, it will run each slot on all files.
@@ -117,7 +107,7 @@ you will lose your earliest backups because later backups will fulfill the same 
 
 ## CLI Mode
 
-Usage: `hfbrw.py target_path [backup_dir]`
+Usage: `hfbr target_path [backup_dir]`
 
 If you don't have a settings file, you can use just the command line interface (CLI)
 for simple change-detection backup without a retention plan.

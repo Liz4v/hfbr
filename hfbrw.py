@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2015, Ekevoo
+# Copyright 2015-2026, Liz Balbuena
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
@@ -15,41 +15,41 @@
 from bz2 import BZ2File
 from datetime import datetime, timedelta
 from functools import reduce
+from hashlib import sha512
 from logging import getLogger
 from logging.config import dictConfig
 from os import listdir, unlink
 from os.path import abspath, basename, dirname, getmtime, join, splitext
-from hashlib import sha512
 from sys import argv
 
-log = getLogger('hfbrw')
+log = getLogger("hfbrw")
 
 
 def main():
     settings = Settings()
-    log.info('^' * 40)
+    log.info("^" * 40)
     for item in settings:
         backup_and_retention(**item)
-    log.info('v' * 40)
+    log.info("v" * 40)
 
 
 def backup_target_database(target_path, backup_dir):
-    hash_path = join(backup_dir, 'last_hash')
+    hash_path = join(backup_dir, "last_hash")
     hasher = sha512()
-    with open(target_path, 'rb') as target:
+    with open(target_path, "rb") as target:
         block_transfer(target.read, hasher.update)
     try:
-        with open(hash_path, 'rb') as hashfile:
+        with open(hash_path, "rb") as hashfile:
             old_hash = hashfile.read()
     except FileNotFoundError:
-        old_hash = b''
+        old_hash = b""
     if hasher.digest() != old_hash:
-        snapshot_filename = datetime.now().strftime('%Y%m%d-%H%M') + splitext(target_path)[1] + '.bz2'
+        snapshot_filename = datetime.now().strftime("%Y%m%d-%H%M") + splitext(target_path)[1] + ".bz2"
         snapshot_path = join(backup_dir, snapshot_filename)
-        log.debug('Change detected! Saving to %s', snapshot_path)
-        with open(target_path, 'rb') as target, BZ2File(snapshot_path, 'wb') as snapshot:
+        log.debug("Change detected! Saving to %s", snapshot_path)
+        with open(target_path, "rb") as target, BZ2File(snapshot_path, "wb") as snapshot:
             block_transfer(target.read, snapshot.write)
-        with open(hash_path, 'wb') as hashfile:
+        with open(hash_path, "wb") as hashfile:
             hashfile.write(hasher.digest())
 
 
@@ -65,20 +65,20 @@ class RetentionPlan:
     def __init__(self, plan_description=None):
         self.plan = plan_description or ()
 
-    def prune(self, target_dir='.', pinned_list=(), prune=False):
+    def prune(self, target_dir=".", pinned_list=(), prune=False):
         if True not in [True for slot in self.plan if slot[1]]:  # at least one slot with limited quantity?
             log.info("No retention plan on %s. Keeping all files.", target_dir)
             return
         log.info("Applying retention plan to %s.", target_dir)
-        files = [FileInfo(target_dir, f, pinned_list) for f in listdir(target_dir) if f.endswith('.bz2')]
+        files = [FileInfo(target_dir, f, pinned_list) for f in listdir(target_dir) if f.endswith(".bz2")]
         files.sort(key=lambda f: -f.timestamp)
         for retention in [SlotOfRetention(*slot) for slot in self.plan]:
             retention.muster(files)
         for file in files:
             if file.pinned:
-                log.debug('Keep file ' + str(file))
+                log.debug("Keep file " + str(file))
             else:
-                log.info('Prune file ' + str(file))
+                log.info("Prune file " + str(file))
                 if prune:
                     unlink(file.filename)
 
@@ -92,7 +92,7 @@ class FileInfo(object):
         self.pinned = filename in pinned_list
 
     def __str__(self):
-        return ' '.join((self.when.strftime('%Y%m%d%H%M%S'), basename(self.filename)))
+        return " ".join((self.when.strftime("%Y%m%d%H%M%S"), basename(self.filename)))
 
     def reduce(self, them):
         if self.pinned != them.pinned:
@@ -109,12 +109,12 @@ class SlotOfRetention:
             self._calc = self._calc_secdiv
         elif isinstance(granularity, str):
             self.granularity = granularity
-            self._calc = getattr(self, '_calc_' + granularity)
+            self._calc = getattr(self, "_calc_" + granularity)
         elif isinstance(granularity, timedelta):
             self.granularity = int(granularity.total_seconds())
             self._calc = self._calc_secdiv
         else:
-            raise ValueError('Unknown granularity type %s', type(granularity))
+            raise ValueError("Unknown granularity type %s", type(granularity))
 
     def muster(self, list_of_files):
         timeslots = {}
@@ -125,7 +125,7 @@ class SlotOfRetention:
             timeslots[position].append(fileinfo)
         keys = sorted(timeslots.keys(), reverse=True)
         if self.quantity:
-            keys = keys[:self.quantity]
+            keys = keys[: self.quantity]
         for slot in keys:
             chosen = reduce(FileInfo.reduce, timeslots[slot])
             chosen.pinned = True
@@ -149,14 +149,14 @@ class Settings(list):
                 import settings
         except ImportError:
             settings = None
-        if hasattr(settings, 'LOGGING'):
+        if hasattr(settings, "LOGGING"):
             dictConfig(settings.LOGGING)
-        super().__init__(getattr(settings, 'TARGETS', self._targets_from_argv()))
+        super().__init__(getattr(settings, "TARGETS", self._targets_from_argv()))
         plans = {}
-        for k, v in getattr(settings, 'PLANS', {}).items():
+        for k, v in getattr(settings, "PLANS", {}).items():
             plans[k] = RetentionPlan(v)
         for item in self:
-            key = 'retention_plan'
+            key = "retention_plan"
             plan = item.get(key)
             if isinstance(plan, str):
                 item[key] = plans[plan]
@@ -164,12 +164,12 @@ class Settings(list):
     def _targets_from_argv(self):
         argv.pop(0)  # remove script name
         if not len(argv):
-            log.fatal('Nothing to do! Check the documentation and make sure to have a settings file.')
+            log.fatal("Nothing to do! Check the documentation and make sure to have a settings file.")
             exit(1)
             return []
-        target = {'target_path': argv.pop(0)}
+        target = {"target_path": argv.pop(0)}
         if len(argv):
-            target['backup_dir'] = argv.pop(0)
+            target["backup_dir"] = argv.pop(0)
         yield target
 
 
@@ -187,5 +187,5 @@ def backup_and_retention(target_path=None, backup_dir=None, retention_plan=(), p
     retention_plan.prune(backup_dir, pin, prune)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

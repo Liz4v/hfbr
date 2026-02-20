@@ -1,0 +1,8 @@
+version = 1
+revision = 3
+requires-python = ">=3.5"
+
+[[package]]
+name = "hfbr"
+version = "15.0"
+source = { virtual = "." }

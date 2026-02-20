@@ -1,0 +1,10 @@
+[project]
+name = "hfbr"
+version = "15.0"
+description = "High Frequency Backup and Retention"
+readme = "README.md"
+requires-python = ">=3.5"
+dependencies = []
+
+[tool.ruff]
+line-length = 120

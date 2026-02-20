@@ -3,7 +3,7 @@
 Backup important small files under a high frequency schedule,
 avoiding duplicates, and pruning less relevant snapshots as they get older.
 
-Licensed under the [Apache License 2.0](LICENSE.rst).
+Licensed under the [Apache License 2.0](LICENSE).
 
 ## Installation
 

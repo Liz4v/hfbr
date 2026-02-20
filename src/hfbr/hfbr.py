@@ -59,13 +59,8 @@ class Settings(list):
         argv.pop(0)  # remove script name
         if not len(argv):
             log.fatal("Nothing to do! Check the documentation and make sure to have a settings file.")
-            exit(1)
-            return []
+            raise SystemExit(1)
         target = {"target_path": argv.pop(0)}
         if len(argv):
             target["backup_dir"] = argv.pop(0)
         yield target
-
-
-if __name__ == "__main__":
-    main()

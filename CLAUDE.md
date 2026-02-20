@@ -12,8 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Python**: >=3.14
 - **Install dependencies**: `uv sync`
 - **Run the tool**: `uv run hfbr` (reads `settings.yaml` in cwd) or `uv run hfbr <target_path> [backup_dir]` (CLI mode)
+- **Test**: `uv run pytest` (includes coverage report and `ty check` type checking)
 - **Lint**: `uv run ruff check` (line-length: 120)
 - **Format**: `uv run ruff format`
+- **Type check**: `uv run ty check`
 
 ## Architecture
 

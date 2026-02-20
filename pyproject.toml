@@ -13,5 +13,16 @@ hfbr = "hfbr.hfbr:main"
 requires = ["uv-build"]
 build-backend = "uv_build"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=hfbr --cov-report=term-missing"
+
 [tool.ruff]
 line-length = 120
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ty>=0.0.17",
+]

@@ -5,7 +5,6 @@ from io import BytesIO
 from hfbr.backup import backup_and_retention, backup_target_database, block_transfer
 from hfbr.retention import RetentionPlan
 
-
 # ── block_transfer ──────────────────────────────────────────────────────────
 
 
@@ -103,7 +102,7 @@ class TestBackupTargetDatabase:
 class TestBackupAndRetention:
     def test_no_target_or_backup_dir_logs_error(self):
         # Should not raise, just log an error and return
-        backup_and_retention(target_path=None, backup_dir=None)
+        backup_and_retention(target_path="", backup_dir="")
 
     def test_with_target_path_only(self, tmp_path):
         target = tmp_path / "data.db"

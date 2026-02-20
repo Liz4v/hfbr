@@ -5,7 +5,6 @@ import pytest
 
 from hfbr.retention import FileInfo, RetentionPlan, SlotOfRetention, parse_duration
 
-
 # ── parse_duration ──────────────────────────────────────────────────────────
 
 
@@ -133,7 +132,7 @@ class TestSlotOfRetention:
 
     def test_invalid_granularity_raises(self):
         with pytest.raises(ValueError):
-            SlotOfRetention(42, 5)
+            SlotOfRetention(42, 5)  # type: ignore[arg-type]
 
     def test_muster_pins_files(self, tmp_path):
         import os

@@ -11,17 +11,19 @@
 # See the License for the specific language governing permissions and limitations under the License.
 #
 from bz2 import BZ2File
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from hashlib import sha512
 from logging import getLogger
 from os.path import abspath, dirname, join, splitext
+from typing import Any
 
 from hfbr.retention import RetentionPlan
 
 log = getLogger("hfbr")
 
 
-def backup_target_database(target_path, backup_dir):
+def backup_target_database(target_path: str, backup_dir: str) -> None:
     hash_path = join(backup_dir, "last_hash")
     hasher = sha512()
     with open(target_path, "rb") as target:
@@ -41,7 +43,7 @@ def backup_target_database(target_path, backup_dir):
             hashfile.write(hasher.digest())
 
 
-def block_transfer(fread, fwrite, length=16 * 1024):
+def block_transfer(fread: Callable[[int], bytes], fwrite: Callable[[bytes], Any], length: int = 16 * 1024) -> None:
     """Copy blocks using file-like reader and write functions, based on shutil.copyfileobj."""
     buffer = fread(length)
     while buffer:
@@ -49,7 +51,13 @@ def block_transfer(fread, fwrite, length=16 * 1024):
         buffer = fread(length)
 
 
-def backup_and_retention(target_path=None, backup_dir=None, retention_plan=(), pin=(), prune=True):
+def backup_and_retention(
+    target_path: str = "",
+    backup_dir: str = "",
+    retention_plan: RetentionPlan | tuple = (),
+    pin: Sequence[str] = (),
+    prune: bool = True,
+) -> None:
     if not (target_path or backup_dir):
         log.error("Invalid target: no target_path or backup_dir. Check your settings!")
         return
@@ -60,4 +68,5 @@ def backup_and_retention(target_path=None, backup_dir=None, retention_plan=(), p
         backup_target_database(target_path, backup_dir)
     if not isinstance(retention_plan, RetentionPlan):
         retention_plan = RetentionPlan(retention_plan)
+    assert backup_dir is not None
     retention_plan.prune(backup_dir, pin, prune)

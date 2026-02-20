@@ -10,6 +10,7 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 #
+from collections.abc import Generator
 from logging import getLogger
 from logging.config import dictConfig
 from os.path import isfile
@@ -23,7 +24,7 @@ from hfbr.retention import RetentionPlan, parse_duration
 log = getLogger("hfbr")
 
 
-def main():
+def main() -> None:
     settings = Settings()
     log.info("^" * 40)
     for item in settings:
@@ -32,12 +33,12 @@ def main():
 
 
 class Settings(list):
-    def __init__(self):
+    def __init__(self) -> None:
         config = self._load_yaml() or {}
         if "logging" in config:
             dictConfig(config["logging"])
         super().__init__(config.get("targets") or list(self._targets_from_argv()))
-        plans = {}
+        plans: dict[str, RetentionPlan] = {}
         for name, slots in config.get("plans", {}).items():
             plans[name] = RetentionPlan(tuple((parse_duration(s[0]), s[1]) for s in slots))
         for item in self:
@@ -48,14 +49,14 @@ class Settings(list):
                 item["retention_plan"] = RetentionPlan(tuple((parse_duration(s[0]), s[1]) for s in plan))
 
     @staticmethod
-    def _load_yaml():
+    def _load_yaml() -> dict | None:
         config_path = "settings.yaml"
         if not isfile(config_path):
             return None
         with open(config_path) as f:
             return safe_load(f)
 
-    def _targets_from_argv(self):
+    def _targets_from_argv(self) -> Generator[dict[str, str]]:
         argv.pop(0)  # remove script name
         if not len(argv):
             log.fatal("Nothing to do! Check the documentation and make sure to have a settings file.")

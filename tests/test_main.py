@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import pytest
 import yaml
 
@@ -10,7 +8,7 @@ from hfbr.retention import RetentionPlan
 
 
 class TestSettings:
-    def test_from_yaml_with_targets(self, tmp_path, monkeypatch):
+    def test_from_yaml_with_targets(self, tmp_path):
         config = {
             "targets": [
                 {"target_path": "/some/path", "backup_dir": "/some/backup"},
@@ -18,13 +16,12 @@ class TestSettings:
         }
         config_file = tmp_path / "settings.yaml"
         config_file.write_text(yaml.dump(config))
-        monkeypatch.chdir(tmp_path)
 
-        settings = Settings()
+        settings = Settings(["-c", str(config_file)])
         assert len(settings) == 1
         assert settings[0]["target_path"] == "/some/path"
 
-    def test_from_yaml_with_named_plans(self, tmp_path, monkeypatch):
+    def test_from_yaml_with_named_plans(self, tmp_path):
         config = {
             "plans": {
                 "daily": [["1 day", 7]],
@@ -35,12 +32,11 @@ class TestSettings:
         }
         config_file = tmp_path / "settings.yaml"
         config_file.write_text(yaml.dump(config))
-        monkeypatch.chdir(tmp_path)
 
-        settings = Settings()
+        settings = Settings(["-c", str(config_file)])
         assert isinstance(settings[0]["retention_plan"], RetentionPlan)
 
-    def test_from_yaml_with_inline_plan(self, tmp_path, monkeypatch):
+    def test_from_yaml_with_inline_plan(self, tmp_path):
         config = {
             "targets": [
                 {"target_path": "/some/path", "retention_plan": [["1 week", 4]]},
@@ -48,12 +44,11 @@ class TestSettings:
         }
         config_file = tmp_path / "settings.yaml"
         config_file.write_text(yaml.dump(config))
-        monkeypatch.chdir(tmp_path)
 
-        settings = Settings()
+        settings = Settings(["-c", str(config_file)])
         assert isinstance(settings[0]["retention_plan"], RetentionPlan)
 
-    def test_from_yaml_with_logging(self, tmp_path, monkeypatch):
+    def test_from_yaml_with_logging(self, tmp_path):
         config = {
             "logging": {
                 "version": 1,
@@ -67,40 +62,46 @@ class TestSettings:
         }
         config_file = tmp_path / "settings.yaml"
         config_file.write_text(yaml.dump(config))
-        monkeypatch.chdir(tmp_path)
 
-        settings = Settings()
+        settings = Settings(["-c", str(config_file)])
         assert len(settings) == 1
 
-    def test_from_argv_with_target_path(self, tmp_path, monkeypatch):
+    def test_from_args_with_target_path(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        with patch("hfbr.main.argv", ["hfbr", "/some/target"]):
-            settings = Settings()
+        settings = Settings(["/some/target"])
         assert len(settings) == 1
         assert settings[0]["target_path"] == "/some/target"
 
-    def test_from_argv_with_target_and_backup(self, tmp_path, monkeypatch):
+    def test_from_args_with_target_and_backup(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        with patch("hfbr.main.argv", ["hfbr", "/some/target", "/some/backup"]):
-            settings = Settings()
+        settings = Settings(["/some/target", "/some/backup"])
         assert len(settings) == 1
         assert settings[0]["target_path"] == "/some/target"
         assert settings[0]["backup_dir"] == "/some/backup"
 
-    def test_from_argv_no_args_exits(self, tmp_path, monkeypatch):
+    def test_no_args_exits(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        with patch("hfbr.main.argv", ["hfbr"]), pytest.raises(SystemExit):
-            Settings()
+        with pytest.raises(SystemExit):
+            Settings([])
 
-    def test_empty_yaml_falls_to_argv(self, tmp_path, monkeypatch):
+    def test_empty_yaml_falls_to_args(self, tmp_path):
         config_file = tmp_path / "settings.yaml"
         config_file.write_text("")
-        monkeypatch.chdir(tmp_path)
-        with patch("hfbr.main.argv", ["hfbr", "/fallback"]):
-            settings = Settings()
+
+        settings = Settings(["-c", str(config_file), "/fallback"])
         assert settings[0]["target_path"] == "/fallback"
 
-    def test_no_retention_plan_in_target(self, tmp_path, monkeypatch):
+    def test_no_retention_plan_in_target(self, tmp_path):
+        config = {
+            "targets": [{"target_path": "/some/path"}],
+        }
+        config_file = tmp_path / "settings.yaml"
+        config_file.write_text(yaml.dump(config))
+
+        settings = Settings(["-c", str(config_file)])
+        assert "retention_plan" not in settings[0]
+
+    def test_default_config_in_cwd(self, tmp_path, monkeypatch):
         config = {
             "targets": [{"target_path": "/some/path"}],
         }
@@ -108,8 +109,9 @@ class TestSettings:
         config_file.write_text(yaml.dump(config))
         monkeypatch.chdir(tmp_path)
 
-        settings = Settings()
-        assert "retention_plan" not in settings[0]
+        settings = Settings([])
+        assert len(settings) == 1
+        assert settings[0]["target_path"] == "/some/path"
 
 
 # ── main ────────────────────────────────────────────────────────────────────

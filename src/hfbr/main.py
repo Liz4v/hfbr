@@ -10,11 +10,10 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 #
-from collections.abc import Generator
+from argparse import ArgumentParser, Namespace
 from logging import getLogger
 from logging.config import dictConfig
 from os.path import isfile
-from sys import argv
 
 from yaml import safe_load
 
@@ -33,11 +32,17 @@ def main() -> None:
 
 
 class Settings(list):
-    def __init__(self) -> None:
-        config = self._load_yaml() or {}
+    def __init__(self, args: list[str] | None = None) -> None:
+        parser = ArgumentParser(description="High Frequency Backup and Retention")
+        parser.add_argument("-c", "--config", default="settings.yaml", help="path to settings YAML file")
+        parser.add_argument("target_path", nargs="?", help="file to back up (CLI mode)")
+        parser.add_argument("backup_dir", nargs="?", help="backup directory (CLI mode)")
+        parsed = parser.parse_args(args)
+
+        config = self._load_yaml(parsed.config) or {}
         if "logging" in config:
             dictConfig(config["logging"])
-        super().__init__(config.get("targets") or list(self._targets_from_argv()))
+        super().__init__(config.get("targets") or list(self._targets_from_args(parsed)))
         plans: dict[str, RetentionPlan] = {}
         for name, slots in config.get("plans", {}).items():
             plans[name] = RetentionPlan(tuple((parse_duration(s[0]), s[1]) for s in slots))
@@ -49,19 +54,17 @@ class Settings(list):
                 item["retention_plan"] = RetentionPlan(tuple((parse_duration(s[0]), s[1]) for s in plan))
 
     @staticmethod
-    def _load_yaml() -> dict | None:
-        config_path = "settings.yaml"
+    def _load_yaml(config_path: str) -> dict | None:
         if not isfile(config_path):
             return None
         with open(config_path) as f:
             return safe_load(f)
 
-    def _targets_from_argv(self) -> Generator[dict[str, str]]:
-        argv.pop(0)  # remove script name
-        if not len(argv):
+    def _targets_from_args(self, parsed: Namespace) -> list[dict[str, str]]:
+        if not parsed.target_path:
             log.fatal("Nothing to do! Check the documentation and make sure to have a settings file.")
             raise SystemExit(1)
-        target = {"target_path": argv.pop(0)}
-        if len(argv):
-            target["backup_dir"] = argv.pop(0)
-        yield target
+        target: dict[str, str] = {"target_path": parsed.target_path}
+        if parsed.backup_dir:
+            target["backup_dir"] = parsed.backup_dir
+        return [target]

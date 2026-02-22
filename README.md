@@ -116,7 +116,11 @@ you will lose your earliest backups because later backups will fulfill the same 
 
 ## CLI Mode
 
-Usage: `hfbr target_path [backup_dir]`
+```
+hfbr                               # reads ./settings.yaml
+hfbr -c /etc/hfbr/settings.yaml    # reads given config
+hfbr target_path [backup_dir]      # CLI mode (no config)
+```
 
 If you don't have a settings file, you can use just the command line interface (CLI)
 for simple change-detection backup without a retention plan.

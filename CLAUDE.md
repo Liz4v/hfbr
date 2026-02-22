@@ -30,3 +30,8 @@ The package is split into three modules under [src/hfbr/](src/hfbr/). Entry poin
 - [src/hfbr/retention.py](src/hfbr/retention.py) — `RetentionPlan`, `SlotOfRetention`, `FileInfo`, and `parse_duration()`. Each slot has a granularity (`year`, `month`, timedelta, or `null`) and a quantity. Slots group files into time buckets and pin the earliest file per bucket up to the quantity limit.
 
 **Config structure** (`settings.yaml`): three top-level keys — `targets` (list of backup jobs), `plans` (named retention plan definitions), `logging` (Python dictConfig).
+
+## Publishing
+
+- **Build**: `uv build`
+- **Publish**: Push a git tag (e.g. `git tag v15.0 && git push origin --tags`) — the [GitHub Actions workflow](.github/workflows/pypi.yaml) handles PyPI upload via trusted publishing (OIDC).

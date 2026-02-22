@@ -1,0 +1,40 @@
+name: Publish to PyPI
+# https://docs.pypi.org/trusted-publishers/
+
+on:
+  push:
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # Needed for OIDC token request
+
+jobs:
+  build-and-publish:
+    name: Build and Publish
+    environment:
+      name: pypi
+      url: https://pypi.org/project/hfbr/
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          uv --version
+
+      - name: Build distribution
+        run: uv build --wheel --sdist
+
+      - name: Inspect dist artifacts
+        run: ls -l dist
+
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

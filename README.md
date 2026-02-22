@@ -7,10 +7,19 @@ Licensed under the [Apache License 2.0](LICENSE).
 
 ## Installation
 
-1.  Make sure you have [python3](http://python.org/) installed.
-2.  Copy `example_settings.yaml` into `settings.yaml`.
-3.  Edit the newly created [Settings File](#settings-file) according to your needs, or do some basic testing with [CLI Mode](#cli-mode).
-4.  Add `hfbr` to your crontab. My schedule is `*/20 * * * *`, which means every 20 minutes.
+```
+uv tool install hfbr
+```
+
+Or, if you prefer pip:
+
+```
+pip install hfbr
+```
+
+1.  Copy `example_settings.yaml` into `settings.yaml`.
+2.  Edit the newly created [Settings File](#settings-file) according to your needs, or do some basic testing with [CLI Mode](#cli-mode).
+3.  Add `hfbr` to your crontab. My schedule is `*/20 * * * *`, which means every 20 minutes.
 
 ## Settings File
 

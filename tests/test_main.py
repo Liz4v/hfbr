@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from hfbr.hfbr import Settings, main
+from hfbr.main import Settings, main
 from hfbr.retention import RetentionPlan
 
 # ── Settings ────────────────────────────────────────────────────────────────
@@ -74,14 +74,14 @@ class TestSettings:
 
     def test_from_argv_with_target_path(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        with patch("hfbr.hfbr.argv", ["hfbr", "/some/target"]):
+        with patch("hfbr.main.argv", ["hfbr", "/some/target"]):
             settings = Settings()
         assert len(settings) == 1
         assert settings[0]["target_path"] == "/some/target"
 
     def test_from_argv_with_target_and_backup(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        with patch("hfbr.hfbr.argv", ["hfbr", "/some/target", "/some/backup"]):
+        with patch("hfbr.main.argv", ["hfbr", "/some/target", "/some/backup"]):
             settings = Settings()
         assert len(settings) == 1
         assert settings[0]["target_path"] == "/some/target"
@@ -89,14 +89,14 @@ class TestSettings:
 
     def test_from_argv_no_args_exits(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        with patch("hfbr.hfbr.argv", ["hfbr"]), pytest.raises(SystemExit):
+        with patch("hfbr.main.argv", ["hfbr"]), pytest.raises(SystemExit):
             Settings()
 
     def test_empty_yaml_falls_to_argv(self, tmp_path, monkeypatch):
         config_file = tmp_path / "settings.yaml"
         config_file.write_text("")
         monkeypatch.chdir(tmp_path)
-        with patch("hfbr.hfbr.argv", ["hfbr", "/fallback"]):
+        with patch("hfbr.main.argv", ["hfbr", "/fallback"]):
             settings = Settings()
         assert settings[0]["target_path"] == "/fallback"
 

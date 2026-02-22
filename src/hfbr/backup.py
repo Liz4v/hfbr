@@ -20,7 +20,7 @@ from typing import Any
 
 from hfbr.retention import RetentionPlan
 
-log = getLogger("hfbr")
+log = getLogger(__name__)
 
 
 def backup_target_database(target_path: str, backup_dir: str) -> None:

@@ -7,7 +7,7 @@ requires-python = ">=3.14"
 dependencies = ["pyyaml>=5.0"]
 
 [project.scripts]
-hfbr = "hfbr.hfbr:main"
+hfbr = "hfbr.main:main"
 
 [build-system]
 requires = ["uv-build"]

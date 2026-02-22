@@ -18,7 +18,7 @@ from os import listdir, unlink
 from os.path import basename, getmtime, join
 from re import compile as re_compile
 
-log = getLogger("hfbr")
+log = getLogger(__name__)
 
 
 class RetentionPlan:

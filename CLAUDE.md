@@ -19,13 +19,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-The package is split into three modules under [src/hfbr/](src/hfbr/). Entry point is `main()` in `hfbr.py`.
+The package is split into three modules under [src/hfbr/](src/hfbr/). Entry point is `main()` in `main.py`.
 
 **Flow**: `main()` → `Settings()` loads `settings.yaml` (or parses argv) → iterates targets → `backup_and_retention()` per target.
 
 **Modules**:
 
-- [src/hfbr/hfbr.py](src/hfbr/hfbr.py) — `Settings` (parses `settings.yaml` or CLI argv, resolves named retention plans) and `main()` entry point.
+- [src/hfbr/main.py](src/hfbr/main.py) — `Settings` (parses `settings.yaml` or CLI argv, resolves named retention plans) and `main()` entry point.
 - [src/hfbr/backup.py](src/hfbr/backup.py) — `backup_target_database()` (SHA-512 change detection, bz2-compressed snapshots), `block_transfer()`, and `backup_and_retention()` per-target orchestrator.
 - [src/hfbr/retention.py](src/hfbr/retention.py) — `RetentionPlan`, `SlotOfRetention`, `FileInfo`, and `parse_duration()`. Each slot has a granularity (`year`, `month`, timedelta, or `null`) and a quantity. Slots group files into time buckets and pin the earliest file per bucket up to the quantity limit.
 

@@ -21,7 +21,7 @@ from yaml import safe_load
 from hfbr.backup import backup_and_retention
 from hfbr.retention import RetentionPlan, parse_duration
 
-log = getLogger("hfbr")
+log = getLogger(__name__)
 
 
 def main() -> None:

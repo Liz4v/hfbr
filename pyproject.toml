@@ -1,6 +1,6 @@
 [project]
 name = "hfbr"
-version = "15.0"
+version = "0.2"
 description = "High Frequency Backup and Retention"
 readme = "README.md"
 requires-python = ">=3.14"

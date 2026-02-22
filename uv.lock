@@ -52,7 +52,7 @@ wheels = [
 
 [[package]]
 name = "hfbr"
-version = "15.0"
+version = "0.2"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
